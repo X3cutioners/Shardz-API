@@ -1,6 +1,8 @@
-Flask==3.0.0
+flask
 flask-cors
 supabase
 imagekitio
 argon2-cffi
 requests
+gunicorn
+wheel
