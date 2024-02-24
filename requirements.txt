@@ -1,1 +1,6 @@
 Flask==3.0.0
+flask-cors
+supabase
+imagekitio
+argon2-cffi
+requests
