@@ -2,14 +2,18 @@ import string, random, os, send_email, requests
 from argon2 import PasswordHasher
 from supabase import create_client, Client
 from imagekitio import ImageKit
+from dotenv import dotenv_values
+
+# Load Environment Variables
+envs = dotenv_values(".env")
 
 # Environment Variables
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
-private_key: str = os.environ.get("IMAGEKIT_PRIVATE_KEY")
-public_key: str = os.environ.get("IMAGEKIT_PUBLIC_KEY")
-url_endpoint: str = os.environ.get("IMAGEKIT_URL_ENDPOINT")
-ipapi_key: str = os.environ.get("IPAPI_KEY")
+url: str = envs.get("SUPABASE_URL")
+key: str = envs.get("SUPABASE_KEY")
+private_key: str = envs.get("IMAGEKIT_PRIVATE_KEY")
+public_key: str = envs.get("IMAGEKIT_PUBLIC_KEY")
+url_endpoint: str = envs.get("IMAGEKIT_URL_ENDPOINT")
+ipapi_key: str = envs.get("IPAPI_KEY")
 
 # ImageKit SDK initialization
 imagekit = ImageKit(private_key=private_key, public_key=public_key, url_endpoint=url_endpoint)

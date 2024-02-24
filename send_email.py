@@ -1,15 +1,19 @@
 import os
+from dotenv import dotenv_values
 from smtplib import SMTP
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
 
+# Load Environment Variables
+envs = dotenv_values(".env")
+
 # SMTP Configuration
-smtp_api = os.environ.get('SMTP_API')
-smtp_email = os.environ.get('SMTP_EMAIL')
-smtp_server = os.environ.get('SMTP_SERVER')
-smtp_port = os.environ.get('SMTP_PORT')
-smtp_sender = os.environ.get('SMTP_SENDER')
+smtp_api = envs.get('SMTP_API')
+smtp_email = envs.get('SMTP_EMAIL')
+smtp_server = envs.get('SMTP_SERVER')
+smtp_port = envs.get('SMTP_PORT')
+smtp_sender = envs.get('SMTP_SENDER')
 
 def send_email(subject, message, to_email):
     from_email = smtp_email
