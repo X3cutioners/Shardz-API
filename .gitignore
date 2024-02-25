@@ -10,5 +10,10 @@ env/
 venv/ 
 ENV/ 
 env.bak/ 
+<<<<<<< HEAD
 venv.bak/ 
 shardzenv/
+=======
+venv.bak/
+shardzenv/
+>>>>>>> 49cacb3139fa63536f4824d006eda5bc391347c8
