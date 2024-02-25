@@ -79,7 +79,7 @@ def verify_email(token):
     else:
         user = user.data[0]
         access_token = generate_token(16)
-        supabase.table('users').update({"verification": "verified", "access_token": access_token}).eq('verification_token', token).execute()
+        supabase.table('users').update({"verification": "verified", "access_token": access_token}).eq('verification', token).execute()
         return access_token
 
 def update_profile(access_token, name, email, file):
