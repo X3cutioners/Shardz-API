@@ -73,7 +73,7 @@ def forgot_password(email, ip_addr):
         return True
 
 def verify_email(token):
-    user = supabase.table('users').select("*").eq('verification_token', token).execute()
+    user = supabase.table('users').select("*").eq('verification', token).execute()
     if len(user.data) == 0:
         return None
     else:
