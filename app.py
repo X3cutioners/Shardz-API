@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
-
+app.config['MAX_CONTENT_LENGTH'] = 2500 * 1000 * 1000
 # Enable CORS
 CORS(app)
 
