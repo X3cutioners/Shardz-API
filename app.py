@@ -60,8 +60,8 @@ def verify_email():
 @app.route('/update-profile', methods=['POST'])
 def update_profile():
     access_token = request.headers.get('Authorization')
-    first_name = request.json['name']
-    email = request.json['email']
+    first_name = request.form['name']
+    email = request.form['email']
     file = request.files['file']
     response = shardz.update_profile(access_token, first_name, email, file)
     if response:
