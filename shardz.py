@@ -1,4 +1,4 @@
-import string, random, os, send_email, requests
+import string, random, os, send_email, requests, json
 from argon2 import PasswordHasher
 from supabase import create_client, Client
 from imagekitio import ImageKit
@@ -113,3 +113,12 @@ def get_profile(access_token):
     else:
         user = user.data[0]
         return user
+    
+def dashboard(access_token):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        json_data = open("dashboard.json", "r").read()
+        json_data = json.loads(json_data)
+        return json_data

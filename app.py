@@ -90,5 +90,26 @@ def get_profile():
     else:
         return jsonify({"message": "Invalid access token"}), 401
 
+# @app.route('/upload', methods=['POST'])
+# def upload():
+#     files = request.files.getlist('files[]')
+#     if 'files[]' not in request.files:
+#         print("No file part")
+#         return jsonify({"message": "No file part"}), 400
+#     filenames = ""
+#     for file in files:
+#        filenames += file.filename + " "
+#        print(file.filename)
+#     return filenames
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    access_token = request.headers.get('Authorization')
+    response = shardz.dashboard(access_token)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
+
 if __name__ == '__main__':
-    app.run(host="0.0.0.0")
+    app.run(debug=True)
