@@ -1,5 +1,5 @@
 import shardz
-from flask import Flask, request, jsonify, request
+from flask import Flask, request, jsonify, request, redirect
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -90,26 +90,24 @@ def get_profile():
     else:
         return jsonify({"message": "Invalid access token"}), 401
 
-# @app.route('/upload', methods=['POST'])
-# def upload():
-#     files = request.files.getlist('files[]')
-#     if 'files[]' not in request.files:
-#         print("No file part")
-#         return jsonify({"message": "No file part"}), 400
-#     filenames = ""
-#     for file in files:
-#        filenames += file.filename + " "
-#        print(file.filename)
-#     return filenames
-
-@app.route('/dashboard', methods=['GET'])
-def dashboard():
+@app.route('/add-storage', methods=['POST'])
+def add_storage():
     access_token = request.headers.get('Authorization')
-    response = shardz.dashboard(access_token)
+    response = shardz.add_storage(access_token)
     if response:
         return jsonify(response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401
+
+@app.route('/oauth/<drive>/callback')
+def oauth_callback(drive):
+    code = request.args.get('code')
+    csrf = request.args.get('state')
+    response = shardz.oauth_callback(drive, csrf, code)
+    if response:
+        return redirect(f"https://shardz.moogi.tech/success?drive={drive}", code=302)
+    else:
+        return jsonify({"message": "Invalid CSRF token"}), 401
 
 if __name__ == '__main__':
     app.run(debug=True)

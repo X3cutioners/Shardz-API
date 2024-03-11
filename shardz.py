@@ -3,6 +3,7 @@ from argon2 import PasswordHasher
 from supabase import create_client, Client
 from imagekitio import ImageKit
 from dotenv import dotenv_values
+from drives import box, dbox
 
 # Load Environment Variables
 envs = dotenv_values(".env")
@@ -23,6 +24,10 @@ ph = PasswordHasher()
 
 # Supabase SDK initialization
 supabase: Client = create_client(url, key)
+
+####################################################
+# Shardz Account Management System
+####################################################
 
 def generate_token(n):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=n))
@@ -122,3 +127,127 @@ def dashboard(access_token):
         json_data = open("dashboard.json", "r").read()
         json_data = json.loads(json_data)
         return json_data
+
+####################################################
+# Shardz Drives Management System
+####################################################
+
+# Box Access_Token Generator
+# def add_box_drive(csrf_token, code):
+#     user = supabase.table('users').select("*").eq('drive_csrf.box', csrf_token).execute()
+#     if len(user.data) == 0:
+#         return None
+#     else:
+#         response = box.getAccessToken(code)
+#         drives = user.data[0]['drives']
+#         drive_data = {
+#             "drive_id": 
+#         }
+
+#     tokens = box.getAccessToken(code)
+#     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+#     if len(user.data) == 0:
+#         return None
+#     else:
+#         drives = user.data[0]['drives']
+#         drives_count = len(drives)
+#         drives.append({"drive_id": tokens['drive_id'], "type": "box", "access_token": tokens['access_token'], "refresh_token": tokens['refresh_token'], "id": drives_count + 1})
+#         supabase.table('users').update({"drives": drives}).eq('access_token', access_token).execute()
+#         return True
+
+# def handleBoxCallback(csrf_token, code):
+#     user = supabase.table('users').select("*").eq('drive_csrf.box', csrf_token).execute()
+#     if len(user.data) == 0:
+#         return None
+#     else:
+#         access_token = user.data[0]['access_token']
+#         response = add_box_drive(access_token, code)
+#         return response
+    
+# def add_drives(access_token):
+#     boxdata = box.gen_auth_url()
+#     add_drives_urls = {"box": boxdata['auth_url']}
+#     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+#     if len(user.data) == 0:
+#         return None
+#     else:
+#         drive_csrf_data = {
+#             "box": boxdata['csrf_token']
+#         }
+#         supabase.table('users').update({"drive_csrf": drive_csrf_data}).eq('access_token', access_token).execute()
+#     return add_drives_urls
+
+# def add_storage(access_token, drive):
+    
+
+
+def add_storage(access_token):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        csrf = generate_token(16)
+        supabase.table('users').update({"csrf_drive": csrf}).eq('access_token', access_token).execute()
+        storage_oauth = []
+        box_oauth = box.gen_auth_url()
+        dropbox_oauth = dbox.gen_auth_url()
+        box_oauth_url = {
+            "drive": "box",
+            "url": box_oauth
+        }
+        dropbox_oauth_url = {
+            "drive": "dropbox",
+            "url": dropbox_oauth
+        }
+        storage_oauth.append(box_oauth_url)
+        storage_oauth.append(dropbox_oauth_url)
+        return storage_oauth
+    
+def if_exists(csrf, drive_unique_id):
+    user = supabase.table('users').select("*").eq('csrf_drive', csrf).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        drives = user.data[0]['drives']
+        for drive in drives:
+            if drive['drive_unique_id'] == drive_unique_id:
+                return True
+        return False
+
+def oauth_callback(code, csrf, drive):
+    user = supabase.table('users').select("*").eq('csrf_drive', csrf).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        drive_data = user.data[0]['drives']
+        if drive == "box":
+            drive_data = box.getAccessToken(code)
+            if if_exists(csrf, drive_data['id']):
+                return False
+            else:
+                drive_json = {
+                    "id": len(drive_data) + 1,
+                    "drive_unique_id": drive_data['drive_id'],
+                    "drive_name": "Box",
+                    "access_token": drive_data['access_token'],
+                    "refresh_token": drive_data['refresh_token']
+                }
+                drive_data.append(drive_json)
+                supabase.table('users').update({"drives": drive_data}).eq('csrf_drive', csrf).execute()
+                return True
+            
+        elif drive == "dropbox":
+            drive_data = dbox.getAccessToken(code)
+            if if_exists(csrf, drive_data['uid']):
+                return False
+            else:
+                drive_json = {
+                    "id": len(drive_data) + 1,
+                    "drive_unique_id": drive_data['uid'],
+                    "drive_name": "Dropbox",
+                    "access_token": drive_data['access_token'],
+                    "refresh_token": drive_data['refresh_token']
+                }
+                drive_data.append(drive_json)
+                supabase.table('users').update({"drives": drive_data}).eq('csrf_drive', csrf).execute()
+                return True
