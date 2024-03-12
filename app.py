@@ -109,5 +109,14 @@ def oauth_callback(drive):
     else:
         return jsonify({"message": "Invalid CSRF token"}), 401
 
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    access_token = request.headers.get('Authorization')
+    response = shardz.dashboard(access_token)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
+
 if __name__ == '__main__':
     app.run(debug=True)
