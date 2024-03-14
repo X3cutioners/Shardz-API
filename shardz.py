@@ -132,55 +132,6 @@ def dashboard(access_token):
 # Shardz Drives Management System
 ####################################################
 
-# Box Access_Token Generator
-# def add_box_drive(csrf_token, code):
-#     user = supabase.table('users').select("*").eq('drive_csrf.box', csrf_token).execute()
-#     if len(user.data) == 0:
-#         return None
-#     else:
-#         response = box.getAccessToken(code)
-#         drives = user.data[0]['drives']
-#         drive_data = {
-#             "drive_id": 
-#         }
-
-#     tokens = box.getAccessToken(code)
-#     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
-#     if len(user.data) == 0:
-#         return None
-#     else:
-#         drives = user.data[0]['drives']
-#         drives_count = len(drives)
-#         drives.append({"drive_id": tokens['drive_id'], "type": "box", "access_token": tokens['access_token'], "refresh_token": tokens['refresh_token'], "id": drives_count + 1})
-#         supabase.table('users').update({"drives": drives}).eq('access_token', access_token).execute()
-#         return True
-
-# def handleBoxCallback(csrf_token, code):
-#     user = supabase.table('users').select("*").eq('drive_csrf.box', csrf_token).execute()
-#     if len(user.data) == 0:
-#         return None
-#     else:
-#         access_token = user.data[0]['access_token']
-#         response = add_box_drive(access_token, code)
-#         return response
-    
-# def add_drives(access_token):
-#     boxdata = box.gen_auth_url()
-#     add_drives_urls = {"box": boxdata['auth_url']}
-#     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
-#     if len(user.data) == 0:
-#         return None
-#     else:
-#         drive_csrf_data = {
-#             "box": boxdata['csrf_token']
-#         }
-#         supabase.table('users').update({"drive_csrf": drive_csrf_data}).eq('access_token', access_token).execute()
-#     return add_drives_urls
-
-# def add_storage(access_token, drive):
-    
-
-
 def add_storage(access_token):
     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
     if len(user.data) == 0:
@@ -189,8 +140,8 @@ def add_storage(access_token):
         csrf = generate_token(16)
         supabase.table('users').update({"csrf_drive": csrf}).eq('access_token', access_token).execute()
         storage_oauth = []
-        box_oauth = box.gen_auth_url()
-        dropbox_oauth = dbox.gen_auth_url()
+        box_oauth = box.gen_auth_url(csrf)
+        dropbox_oauth = dbox.gen_auth_url(csrf)
         box_oauth_url = {
             "drive": "box",
             "url": box_oauth
