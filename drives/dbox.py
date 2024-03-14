@@ -9,8 +9,9 @@ load_dotenv(dotenv_path)
 
 
 def gen_auth_url(csrf):
-    client_id = os.getenv('DROPBOX_CLIENT_ID')
+    client_id = os.getenv('DROPBOX_APP_KEY')
     dropbox_redirect_uri = os.getenv('DROPBOX_REDIRECT_URI')
+    print(dropbox_redirect_uri)
     dropbox_state = csrf
     auth_url = f"https://www.dropbox.com/oauth2/authorize?client_id={client_id}&redirect_uri={dropbox_redirect_uri}&response_type=code&token_access_type=offline&force_reapprove=true&state={dropbox_state}"
     return auth_url
@@ -18,11 +19,12 @@ def gen_auth_url(csrf):
 def getAccessToken(code):
     app_key = os.getenv('DROPBOX_APP_KEY')
     app_secret = os.getenv('DROPBOX_APP_SECRET')
+    redirect_uri = os.getenv('DROPBOX_REDIRECT_URI')
     response = requests.post('https://api.dropboxapi.com/oauth2/token', params={
         'code': code,
         'grant_type': 'authorization_code',
         'client_id': app_key,
         'client_secret': app_secret,
-        'redirect_uri': os.getenv('DROPBOX_REDIRECT_URI')
+        'redirect_uri': redirect_uri
     })
     return response.json()

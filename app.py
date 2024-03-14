@@ -103,7 +103,8 @@ def add_storage():
 def oauth_callback(drive):
     code = request.args.get('code')
     csrf = request.args.get('state')
-    response = shardz.oauth_callback(drive, csrf, code)
+    print(code, csrf, drive)
+    response = shardz.oauth_callback(code, csrf, drive)
     if response:
         return redirect(f"https://shardz.moogi.tech/success?drive={drive}", code=302)
     else:

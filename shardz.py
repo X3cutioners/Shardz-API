@@ -60,7 +60,7 @@ def register(name, email, password):
         access_token = generate_token(16)
         print(verification_token)
         send_email.send_verification_email(name, email, verification_token)
-        supabase.table('users').insert({"name": name, "email": email, "password": hashed_password, "verification": verification_token, "access_token": access_token}).execute()
+        supabase.table('users').insert({"name": name, "email": email, "password": hashed_password, "verification": verification_token, "access_token": access_token, "files": {"files": []}, "drives": {"drives": []}}).execute()
         return True
     else:
         return None
@@ -138,7 +138,8 @@ def add_storage(access_token):
         return None
     else:
         csrf = generate_token(16)
-        supabase.table('users').update({"csrf_drive": csrf}).eq('access_token', access_token).execute()
+        response = supabase.table('users').update({"csrf_drive": csrf}).eq('access_token', access_token).execute()
+        print(response)
         storage_oauth = []
         box_oauth = box.gen_auth_url(csrf)
         dropbox_oauth = dbox.gen_auth_url(csrf)
@@ -154,12 +155,16 @@ def add_storage(access_token):
         storage_oauth.append(dropbox_oauth_url)
         return storage_oauth
     
+## Checking if the Drive is already existing in the user's account
+
 def if_exists(csrf, drive_unique_id):
     user = supabase.table('users').select("*").eq('csrf_drive', csrf).execute()
     if len(user.data) == 0:
         return None
     else:
-        drives = user.data[0]['drives']
+        drives = user.data[0]['drives']['drives']
+        if len(drives) == 0:
+            return False
         for drive in drives:
             if drive['drive_unique_id'] == drive_unique_id:
                 return True
@@ -173,7 +178,8 @@ def oauth_callback(code, csrf, drive):
         drive_data = user.data[0]['drives']
         if drive == "box":
             drive_data = box.getAccessToken(code)
-            if if_exists(csrf, drive_data['id']):
+            print(drive_data)
+            if if_exists(csrf, drive_data['drive_id']):
                 return False
             else:
                 drive_json = {
@@ -184,11 +190,13 @@ def oauth_callback(code, csrf, drive):
                     "refresh_token": drive_data['refresh_token']
                 }
                 drive_data.append(drive_json)
+                drive_data = {"drives": drive_data}
                 supabase.table('users').update({"drives": drive_data}).eq('csrf_drive', csrf).execute()
                 return True
             
         elif drive == "dropbox":
             drive_data = dbox.getAccessToken(code)
+            print(drive_data)
             if if_exists(csrf, drive_data['uid']):
                 return False
             else:
