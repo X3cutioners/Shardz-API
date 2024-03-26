@@ -211,10 +211,27 @@ def oauth_callback(code, csrf, drive):
                 drive_data = {"drives": user_drive_data}
                 supabase.table('users').update({"drives": drive_data}).eq('csrf_drive', csrf).execute()
                 return True
-def show_drives(access_token):
+def drives(access_token):
     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
     if len(user.data) == 0:
         return None
     else:
         user = user.data[0]
         return user['drives']['drives']
+
+# def get_drive_stats(access_token, drive_id):
+#     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+#     if len(user.data) == 0:
+#         return None
+#     else:
+#         user = user.data[0]
+#         drives = user['drives']['drives']
+#         for drive in drives:
+#             if drive['drive_unique_id'] == drive_id:
+#                 if drive['drive_name'] == "Box":
+#                     response = box.get_drive(drive['access_token'])
+#                     return response
+#                 elif drive['drive_name'] == "Dropbox":
+#                     response = dbox.get_drive(drive['access_token'])
+#                     return response
+#         return None

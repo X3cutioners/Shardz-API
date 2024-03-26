@@ -1,12 +1,10 @@
-from dotenv import dotenv_values, load_dotenv
+from dotenv import load_dotenv
 import os, requests
-from dropbox import DropboxOAuth2FlowNoRedirect
-
+from dropbox import Dropbox
 current_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.dirname(current_dir)
 dotenv_path = os.path.join(parent_dir, '.env')
 load_dotenv(dotenv_path)
-
 
 def gen_auth_url(csrf):
     client_id = os.getenv('DROPBOX_APP_KEY')
