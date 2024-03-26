@@ -118,6 +118,15 @@ def dashboard():
         return jsonify(response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401
+    
+@app.route('/drives', methods=['GET'])
+def drives():
+    access_token = request.headers.get('Authorization')
+    response = shardz.drives(access_token)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
 
 if __name__ == '__main__':
     app.run(debug=True)

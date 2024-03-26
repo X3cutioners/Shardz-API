@@ -145,11 +145,13 @@ def add_storage(access_token):
         dropbox_oauth = dbox.gen_auth_url(csrf)
         box_oauth_url = {
             "drive": "box",
-            "url": box_oauth
+            "url": box_oauth,
+            "logo": "https://ik.imagekit.io/shardz/icons/box.png"
         }
         dropbox_oauth_url = {
             "drive": "dropbox",
-            "url": dropbox_oauth
+            "url": dropbox_oauth,
+            "logo": "https://ik.imagekit.io/shardz/icons/dropbox.png"
         }
         storage_oauth.append(box_oauth_url)
         storage_oauth.append(dropbox_oauth_url)
@@ -175,10 +177,9 @@ def oauth_callback(code, csrf, drive):
     if len(user.data) == 0:
         return None
     else:
-        drive_data = user.data[0]['drives']
+        user_drive_data = user.data[0]['drives']['drives']
         if drive == "box":
             drive_data = box.getAccessToken(code)
-            print(drive_data)
             if if_exists(csrf, drive_data['drive_id']):
                 return False
             else:
@@ -189,14 +190,13 @@ def oauth_callback(code, csrf, drive):
                     "access_token": drive_data['access_token'],
                     "refresh_token": drive_data['refresh_token']
                 }
-                drive_data.append(drive_json)
-                drive_data = {"drives": drive_data}
+                user_drive_data.append(drive_json)
+                drive_data = {"drives": user_drive_data}
                 supabase.table('users').update({"drives": drive_data}).eq('csrf_drive', csrf).execute()
                 return True
             
         elif drive == "dropbox":
             drive_data = dbox.getAccessToken(code)
-            print(drive_data)
             if if_exists(csrf, drive_data['uid']):
                 return False
             else:
@@ -207,6 +207,14 @@ def oauth_callback(code, csrf, drive):
                     "access_token": drive_data['access_token'],
                     "refresh_token": drive_data['refresh_token']
                 }
-                drive_data.append(drive_json)
+                user_drive_data.append(drive_json)
+                drive_data = {"drives": user_drive_data}
                 supabase.table('users').update({"drives": drive_data}).eq('csrf_drive', csrf).execute()
                 return True
+def show_drives(access_token):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        return user['drives']['drives']
