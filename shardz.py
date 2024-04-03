@@ -307,53 +307,103 @@ def get_all_drives(access_token):
                 all_drives.append(drive_info)
         return all_drives
 
-# def upload(access_token, file):
+def upload(access_token, file):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        file_id = generate_token(10)
+        unique_filename = f'{file_id}.{file.filename.split(".")[-1]}'
+        with open(f'uploads/{unique_filename}', 'wb') as f:
+            f.write(file.read())
+        file_size = os.path.getsize(f'uploads/{unique_filename}')
+        os.mkdir(f'uploads/{file_id}')
+        all_drives = get_all_drives(access_token)
+        available_space = 0
+        for drive in all_drives:
+            if drive['brand'] == "Box":
+                available_space += drive['space_amount'] - drive['space_used']
+            elif drive['brand'] == "Dropbox":
+                available_space += drive['total'] - drive['usage']
+        if file_size > available_space:
+            return None
+        Split(f'uploads/{unique_filename}', f'uploads/{file_id}').bysize(size=524288000)
+        splitted_files = []
+        with open(f'uploads/{file_id}/manifest', 'r') as f:
+            files_data = f.readlines()
+            for file_data in files_data:
+                file_dict = {
+                    "file_name": file_data.split(",")[0],
+                    "file_size": file_data.split(",")[1]
+                }
+                splitted_files.append(file_dict)
+        splitted_files = splitted_files[1:]
+        user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+        drives = user.data[0]['drives']['drives']
+        box_token = ""
+        file_dict = {"name": file.filename, "size": file_size, "id": file_id}
+        file_parts = []
+        for file in splitted_files:
+            for drive in drives:
+                if drive['drive_name'] == "Box":
+                    if box_token == "":
+                        new_tokens = box.refresh_access_token(drive['refresh_token'])
+                        box_token = new_tokens['access_token']
+                        refresh_token = new_tokens['refresh_token']
+                        update_box_token(user.data[0]['email'], refresh_token, drive['id'])
+                    print("going to upload to box")
+                    print(refresh_token)
+                    uploaded_chunk = box.upload(file_id, file['file_name'], box_token, refresh_token)
+                    upload_dict = {
+                        "drive": "Box",
+                        "file_id": uploaded_chunk['id'],
+                        "file_name": uploaded_chunk['name'],
+                        "file_size": uploaded_chunk['size'],
+                        "drive_id": drive['id']
+                    }
+                    file_parts.append(upload_dict)
+                    break
+                elif drive['drive_name'] == "Dropbox":
+                    uploaded_chunk = dbox.upload(file_id, file['file_name'], drive['refresh_token'])
+                    upload_dict = {
+                        "drive": "Dropbox",
+                        "file_id": uploaded_chunk['id'],
+                        "file_name": uploaded_chunk['name'],
+                        "file_size": uploaded_chunk['size'],
+                        "drive_id": drive['id']
+                    }
+                    file_parts.append(upload_dict)
+                    break
+        file_dict.update({"parts": file_parts})
+        files = user.data[0]['files']['files']
+        files.append(file_dict)
+        files_data = {"files": files}
+        supabase.table('users').update({"files": files_data}).eq('access_token', access_token).execute()
+        os.remove(f'uploads/{unique_filename}')
+        shutil.rmtree(f'uploads/{file_id}')
+        return file_dict
+    
+# def download(access_token, file_id):
 #     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
 #     if len(user.data) == 0:
 #         return None
 #     else:
-#         file_id = generate_token(10)
-#         unique_filename = f'{file_id}.{file.filename.split(".")[-1]}'
-#         with open(f'uploads/{unique_filename}', 'wb') as f:
-#             f.write(file.read())
-#         file_size = os.path.getsize(f'uploads/{unique_filename}')
-#         os.mkdir(f'uploads/{file_id}')
-#         all_drives = get_all_drives(access_token)
-#         available_space = 0
-#         for drive in all_drives:
-#             if drive['brand'] == "Box":
-#                 available_space += drive['space_amount'] - drive['space_used']
-#             elif drive['brand'] == "Dropbox":
-#                 available_space += drive['total'] - drive['usage']
-#         if file_size > available_space:
-#             return None
-#         sorted_drives = sorted(all_drives, key=lambda x: x['available'])
-#         Split(f'uploads/{unique_filename}', f'uploads/{file_id}').bysize(size=sorted_drives[0]['available'])
-#         splitted_files = []
-#         with open(f'uploads/{file_id}/manifest', 'r') as f:
-#             files_data = f.readlines()
-#             for file_data in files_data:
-#                 file_dict = {
-#                     "file_name": file_data.split(",")[0],
-#                     "file_size": file_data.split(",")[1]
-#                 }
-#                 splitted_files.append(file_dict)
-#         splitted_files = splitted_files[1:]
-#         user = supabase.table('users').select("*").eq('access_token', access_token).execute()
-#         drives = user.data[0]['drives']['drives']
-#         print(drives)
-#         box_token = ""
-#         for file in splitted_files:
-#             for drive in drives:
-#                 if drive['drive_name'] == "Box":
-#                     if box_token == "":
-#                         new_tokens = box.refresh_access_token(drive['refresh_token'])
-#                         auth_token = new_tokens['access_token']
+#         user = user.data[0]
+#         drives = user['drives']['drives']
+#         files = user['files']['files']
+#         for file in files:
+#             if file['id'] == file_id:
+#                 file_parts = file['parts']
+#                 for part in file_parts:
+
+#                     if part['drive_id'] == "Box":
+#                         new_tokens = box.refresh_access_token(part['refresh_token'])
+#                         access_token = new_tokens['access_token']
 #                         refresh_token = new_tokens['refresh_token']
-#                         update_box_token(user.data[0]['email'], refresh_token, drive['id'])
-#                     box.upload(file_id, file['file_name'], box_token, refresh_token)
-#                 elif drive['drive_name'] == "Dropbox":
-#                     dbox.upload(file_id, file['file_name'], drive['refresh_token'])
-#         os.remove(f'uploads/{unique_filename}')
-#         # shutil.rmtree(f'uploads/{file_id}')
-#         return True
+#                         response = box.download_file(part['file_name'], access_token)
+#                         return response
+#                     elif part['drive'] == "Dropbox":
+#                         response = dbox.download_file(part['file_name'], part['refresh_token'])
+#                         return response
+    
+# print(download(access_token="Z2LFIE2JYS48R0W7", file_id="VXT3YQ9REV"))

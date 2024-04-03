@@ -67,5 +67,6 @@ def upload(file_id, file_name, access_token, refresh_token):
         )
     client = Client(oauth)
     folder_id = 0
-    user = client.user().get().response_object
-    return user
+    new_file = client.folder(folder_id).upload(f'uploads/{file_id}/{file_name}', file_name)
+    print(new_file.response_object)
+    return new_file.response_object

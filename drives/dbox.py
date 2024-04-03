@@ -36,6 +36,7 @@ def refresh_access_token(refresh_token):
         'client_id': app_key,
         'client_secret': app_secret
     })
+    print(response.json())
     return response.json()["access_token"]
 
 def get_drive(refresh_token):
@@ -43,7 +44,6 @@ def get_drive(refresh_token):
     dbx = Dropbox(oauth2_access_token=access_token)
     user = dbx.users_get_current_account()
     usage = dbx.users_get_space_usage()
-    print(usage)
     user = {
         "id": user.account_id,
         "name": user.name.display_name,
@@ -55,12 +55,18 @@ def get_drive(refresh_token):
     user.update({"available": user['usage'] - user['total']})
     return user
 
-def upload_file(file_id, file_name, refresh_token):
+def upload(file_id, file_name, refresh_token):
     access_token = refresh_access_token(refresh_token)
     dbx = Dropbox(oauth2_access_token=access_token)
     with open(f'uploads/{file_id}/{file_name}', 'rb') as f:
-        dbx.files_upload(f.read(), f'/{file_name}', mode=WriteMode('overwrite'))
-    return True
+        uploaded_file = dbx.files_upload(f.read(), f'/{file_name}', mode=WriteMode('overwrite'))
+    file_metadata = {
+        "name": uploaded_file.name,
+        "size": uploaded_file.size,
+        "path": uploaded_file.path_display,
+        "link": dbx.sharing_create_shared_link(uploaded_file.path_display).url,
+        "id": uploaded_file.id}
+    return file_metadata
 
 def download_file(file_name, refresh_token):
     access_token = refresh_access_token(refresh_token)
