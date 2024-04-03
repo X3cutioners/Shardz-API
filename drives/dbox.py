@@ -71,8 +71,5 @@ def upload(file_id, file_name, refresh_token):
 def download_file(file_name, refresh_token):
     access_token = refresh_access_token(refresh_token)
     dbx = Dropbox(oauth2_access_token=access_token)
-    with open(f'uploads/{file_name}', 'wb') as f:
-        metadata, res = dbx.files_download(path=f'/{file_name}')
-        print(metadata)
-        f.write(res.content)
-    return True
+    metadata, res = dbx.files_download(path=f'/{file_name}')
+    return res.content

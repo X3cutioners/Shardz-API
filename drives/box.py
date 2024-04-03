@@ -70,3 +70,15 @@ def upload(file_id, file_name, access_token, refresh_token):
     new_file = client.folder(folder_id).upload(f'uploads/{file_id}/{file_name}', file_name)
     print(new_file.response_object)
     return new_file.response_object
+
+def download_file(access_token, refresh_token, file_id):
+    oauth = OAuth2(
+        client_id= os.getenv('BOX_CLIENT_ID'),
+        client_secret= os.getenv('BOX_CLIENT_SECRET'),
+        access_token= access_token,
+        refresh_token= refresh_token,
+        store_tokens= lambda access_token, refresh_token: None,
+        )
+    client = Client(oauth)
+    file = client.file(file_id).content()
+    return file

@@ -6,6 +6,7 @@ from imagekitio import ImageKit
 from dotenv import dotenv_values
 from filesplit.split import Split
 from filesplit.merge import Merge
+from pathlib import Path
 # Load Environment Variables
 envs = dotenv_values(".env")
 
@@ -379,31 +380,55 @@ def upload(access_token, file):
         files.append(file_dict)
         files_data = {"files": files}
         supabase.table('users').update({"files": files_data}).eq('access_token', access_token).execute()
+        os.mkdir(f'manifests/{file_id}')
+        with open(f'manifests/{file_id}/manifest', 'w', newline='') as f:
+            f.write(open(f'uploads/{file_id}/manifest').read())
         os.remove(f'uploads/{unique_filename}')
         shutil.rmtree(f'uploads/{file_id}')
         return file_dict
-    
-# def download(access_token, file_id):
-#     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
-#     if len(user.data) == 0:
-#         return None
-#     else:
-#         user = user.data[0]
-#         drives = user['drives']['drives']
-#         files = user['files']['files']
-#         for file in files:
-#             if file['id'] == file_id:
-#                 file_parts = file['parts']
-#                 for part in file_parts:
 
-#                     if part['drive_id'] == "Box":
-#                         new_tokens = box.refresh_access_token(part['refresh_token'])
-#                         access_token = new_tokens['access_token']
-#                         refresh_token = new_tokens['refresh_token']
-#                         response = box.download_file(part['file_name'], access_token)
-#                         return response
-#                     elif part['drive'] == "Dropbox":
-#                         response = dbox.download_file(part['file_name'], part['refresh_token'])
-#                         return response
-    
-# print(download(access_token="Z2LFIE2JYS48R0W7", file_id="VXT3YQ9REV"))
+def download_file(access_token, parent_file_id, file_id, file_name, drive_id):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        drives = user['drives']['drives']
+        for drive in drives:
+            if str(drive['id']) == str(drive_id):
+                if drive['drive_name'] == "Box":
+                    new_tokens = box.refresh_access_token(drive['refresh_token'])
+                    access_token = new_tokens['access_token']
+                    refresh_token = new_tokens['refresh_token']
+                    update_box_token(user['email'], refresh_token, drive_id)
+                    file_content = box.download_file(access_token, refresh_token, file_id)
+                    with open(f'downloads/{parent_file_id}/{file_name}', 'wb') as f:
+                        f.write(file_content)
+                elif drive['drive_name'] == "Dropbox":
+                    file_content = dbox.download_file(file_name, drive['refresh_token'])
+                    with open(f'downloads/{parent_file_id}/{file_name}', 'wb') as f:
+                        f.write(file_content)
+        return True
+
+def download(access_token, file_id):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        files = user['files']['files']
+        filename = ""
+        for file in files:
+            if file['id'] == file_id:
+                os.mkdir(f'downloads/{file_id}')
+                with(open(f'downloads/{file_id}/manifest', 'w', newline='')) as f:
+                    f.write(open(f'manifests/{file_id}/manifest').read())
+                filename = file['name']
+                file_parts = file['parts']
+                print(file_parts)
+                for part in file_parts:
+                    download_file(access_token, file_id, part['file_id'], part['file_name'], drive_id=part['drive_id'])
+        merge = Merge(f'downloads/{file_id}', 'downloads', filename)
+        merge.merge()
+        shutil.rmtree(f'downloads/{file_id}')
+        return filename

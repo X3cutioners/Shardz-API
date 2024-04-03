@@ -1,5 +1,5 @@
 import shardz
-from flask import Flask, request, jsonify, request, redirect
+from flask import Flask, request, jsonify, request, redirect, send_file
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -147,6 +147,16 @@ def upload():
     response = shardz.upload(access_token, file)
     if response:
         return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
+    
+@app.route('/download', methods=['POST'])
+def download():
+    access_token = request.headers.get('Authorization')
+    file_id = request.json['file_id']
+    response = shardz.download(access_token, file_id)
+    if response:
+        return send_file(f'downloads/{response}', as_attachment=True, download_name=response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401
 
