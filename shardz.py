@@ -432,3 +432,12 @@ def download(access_token, file_id):
         merge.merge()
         shutil.rmtree(f'downloads/{file_id}')
         return filename
+    
+def files(access_token):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        files = user['files']['files']
+        return files

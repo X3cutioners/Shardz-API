@@ -160,5 +160,14 @@ def download():
     else:
         return jsonify({"message": "Invalid access token"}), 401
 
+@app.route('/files', methods=['POST'])
+def files():
+    access_token = request.headers.get('Authorization')
+    response = shardz.files(access_token)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
+
 if __name__ == '__main__':
     app.run(debug=True)
