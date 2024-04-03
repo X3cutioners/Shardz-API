@@ -9,3 +9,8 @@ wheel
 boxsdk
 python-dotenv
 dropbox
+<<<<<<< HEAD
+=======
+filesplit
+setuptools
+>>>>>>> 986ac8ae3c482d43698970cef27afaecfabb8bb3

@@ -127,6 +127,26 @@ def drives():
         return jsonify(response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401
+    
+@app.route('/drive', methods=['POST'])
+def drive():
+    access_token = request.headers.get('Authorization')
+    drive_id = request.json['drive_id']
+    response = shardz.get_drive(access_token, drive_id)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    access_token = request.headers.get('Authorization')
+    file = request.files['file']
+    response = shardz.upload(access_token, file)
+    if response:
+        return jsonify(response), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
 
 if __name__ == '__main__':
     app.run(debug=True)

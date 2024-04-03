@@ -1,10 +1,11 @@
-import string, random, os, send_email, requests, json
+import string, random, os, send_email, requests, shutil, csv
+from drives import box, dbox
 from argon2 import PasswordHasher
 from supabase import create_client, Client
 from imagekitio import ImageKit
 from dotenv import dotenv_values
-from drives import box, dbox
-
+from filesplit.split import Split
+from filesplit.merge import Merge
 # Load Environment Variables
 envs = dotenv_values(".env")
 
@@ -58,7 +59,6 @@ def register(name, email, password):
         hashed_password = ph.hash(password)
         verification_token = generate_token(30)
         access_token = generate_token(16)
-        print(verification_token)
         send_email.send_verification_email(name, email, verification_token)
         supabase.table('users').insert({"name": name, "email": email, "password": hashed_password, "verification": verification_token, "access_token": access_token, "files": {"files": []}, "drives": {"drives": []}}).execute()
         return True
@@ -118,14 +118,59 @@ def get_profile(access_token):
     else:
         user = user.data[0]
         return user
-    
+
+def update_box_token(email, refresh_token, drive_id):
+    user = supabase.table('users').select("*").eq('email', email).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        drives = user['drives']['drives']
+        for drive in drives:
+            if str(drive['id']) == str(drive_id):
+                drive['refresh_token'] = str(refresh_token)
+                drive_data = {"drives": drives}
+                response = supabase.table('users').update({"drives": drive_data}).eq('email', email).execute()
+                return True
+        return None
+
 def dashboard(access_token):
     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
     if len(user.data) == 0:
         return None
     else:
-        json_data = open("dashboard.json", "r").read()
-        json_data = json.loads(json_data)
+        user = user.data[0]
+        files = user['files']['files']
+        drives = user['drives']['drives']
+        main_drives = {"dropbox": {
+            "drive_name": "Dropbox",
+            "drive_logo": "https://ik.imagekit.io/shardz/icons/dropbox.png",
+            "used": 0,
+            "total": 0
+        }, "box": {
+            "drive_name": "Box",
+            "drive_logo": "https://ik.imagekit.io/shardz/icons/box.png",
+            "used": 0,
+            "total": 0
+        }}
+        for drive in drives:
+            if drive['drive_name'] == "Box":
+                new_tokens = box.refresh_access_token(drive['refresh_token'])
+                access_token = new_tokens['access_token']
+                refresh_token = new_tokens['refresh_token']
+                drive_id = drive['id']
+                update_box_token(user['email'], refresh_token, drive_id)
+                drive_info = box.get_drive(access_token)
+                main_drives['box']['used'] += drive_info['space_used']
+                main_drives['box']['total'] += drive_info['space_amount']
+            elif drive['drive_name'] == "Dropbox":
+                drive_info = dbox.get_drive(drive['refresh_token'])
+                main_drives['dropbox']['used'] += drive_info['usage']
+                main_drives['dropbox']['total'] += drive_info['total']
+        json_data = {
+            "files": files,
+            "drives": main_drives
+        }
         return json_data
 
 ####################################################
@@ -139,7 +184,6 @@ def add_storage(access_token):
     else:
         csrf = generate_token(16)
         response = supabase.table('users').update({"csrf_drive": csrf}).eq('access_token', access_token).execute()
-        print(response)
         storage_oauth = []
         box_oauth = box.gen_auth_url(csrf)
         dropbox_oauth = dbox.gen_auth_url(csrf)
@@ -187,7 +231,7 @@ def oauth_callback(code, csrf, drive):
                     "id": len(drive_data) + 1,
                     "drive_unique_id": drive_data['drive_id'],
                     "drive_name": "Box",
-                    "access_token": drive_data['access_token'],
+                    "drive_logo": "https://ik.imagekit.io/shardz/icons/box.png",
                     "refresh_token": drive_data['refresh_token']
                 }
                 user_drive_data.append(drive_json)
@@ -203,8 +247,8 @@ def oauth_callback(code, csrf, drive):
                 drive_json = {
                     "id": len(drive_data) + 1,
                     "drive_unique_id": drive_data['uid'],
+                    "drive_logo": "https://ik.imagekit.io/shardz/icons/dropbox.png",
                     "drive_name": "Dropbox",
-                    "access_token": drive_data['access_token'],
                     "refresh_token": drive_data['refresh_token']
                 }
                 user_drive_data.append(drive_json)
@@ -219,19 +263,95 @@ def drives(access_token):
         user = user.data[0]
         return user['drives']['drives']
 
-# def get_drive_stats(access_token, drive_id):
+def get_drive(access_token, drive_id):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        drives = user['drives']['drives']
+        for drive in drives:
+            if str(drive['id']) == str(drive_id):
+                if drive['drive_name'] == "Box":
+                    new_tokens = box.refresh_access_token(drive['refresh_token'])
+                    access_token = new_tokens['access_token']
+                    refresh_token = new_tokens['refresh_token']
+                    response = box.get_drive(access_token)
+                    update_box_token(user['email'], refresh_token, drive_id)
+                    return response
+                elif drive['drive_name'] == "Dropbox":
+                    response = dbox.get_drive(drive['refresh_token'])
+                    return response
+        return None
+
+def get_all_drives(access_token):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        drives = user['drives']['drives']
+        all_drives = []
+        for drive in drives:
+            if drive['drive_name'] == "Box":
+                new_tokens = box.refresh_access_token(drive['refresh_token'])
+                access_token = new_tokens['access_token']
+                refresh_token = new_tokens['refresh_token']
+                update_box_token(user['email'], refresh_token, drive['id'])
+                drive_info = box.get_drive(access_token)
+                all_drives.append(drive_info)
+            elif drive['drive_name'] == "Dropbox":
+                drive_info = dbox.get_drive(drive['refresh_token'])
+                all_drives.append(drive_info)
+        return all_drives
+
+# def upload(access_token, file):
 #     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
 #     if len(user.data) == 0:
 #         return None
 #     else:
-#         user = user.data[0]
-#         drives = user['drives']['drives']
-#         for drive in drives:
-#             if drive['drive_unique_id'] == drive_id:
+#         file_id = generate_token(10)
+#         unique_filename = f'{file_id}.{file.filename.split(".")[-1]}'
+#         with open(f'uploads/{unique_filename}', 'wb') as f:
+#             f.write(file.read())
+#         file_size = os.path.getsize(f'uploads/{unique_filename}')
+#         os.mkdir(f'uploads/{file_id}')
+#         all_drives = get_all_drives(access_token)
+#         available_space = 0
+#         for drive in all_drives:
+#             if drive['brand'] == "Box":
+#                 available_space += drive['space_amount'] - drive['space_used']
+#             elif drive['brand'] == "Dropbox":
+#                 available_space += drive['total'] - drive['usage']
+#         if file_size > available_space:
+#             return None
+#         sorted_drives = sorted(all_drives, key=lambda x: x['available'])
+#         Split(f'uploads/{unique_filename}', f'uploads/{file_id}').bysize(size=sorted_drives[0]['available'])
+#         splitted_files = []
+#         with open(f'uploads/{file_id}/manifest', 'r') as f:
+#             files_data = f.readlines()
+#             for file_data in files_data:
+#                 file_dict = {
+#                     "file_name": file_data.split(",")[0],
+#                     "file_size": file_data.split(",")[1]
+#                 }
+#                 splitted_files.append(file_dict)
+#         splitted_files = splitted_files[1:]
+#         user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+#         drives = user.data[0]['drives']['drives']
+#         print(drives)
+#         box_token = ""
+#         for file in splitted_files:
+#             for drive in drives:
 #                 if drive['drive_name'] == "Box":
-#                     response = box.get_drive(drive['access_token'])
-#                     return response
+#                     if box_token == "":
+#                         new_tokens = box.refresh_access_token(drive['refresh_token'])
+#                         auth_token = new_tokens['access_token']
+#                         refresh_token = new_tokens['refresh_token']
+#                         update_box_token(user.data[0]['email'], refresh_token, drive['id'])
+#                     box.upload(file_id, file['file_name'], box_token, refresh_token)
 #                 elif drive['drive_name'] == "Dropbox":
-#                     response = dbox.get_drive(drive['access_token'])
-#                     return response
-#         return None
+#                     dbox.upload(file_id, file['file_name'], drive['refresh_token'])
+#         os.remove(f'uploads/{unique_filename}')
+#         # shutil.rmtree(f'uploads/{file_id}')
+#         return True
