@@ -123,7 +123,9 @@ def dashboard():
 def drives():
     access_token = request.headers.get('Authorization')
     response = shardz.drives(access_token)
-    if response:
+    if response == 404:
+        return jsonify({"message": "No drives added"}), 404
+    elif response:
         return jsonify(response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401

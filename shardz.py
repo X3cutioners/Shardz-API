@@ -261,6 +261,8 @@ def drives(access_token):
         return None
     else:
         user = user.data[0]
+        if len(user['drives']['drives']) == 0:
+            return None
         return user['drives']['drives']
 
 def get_drive(access_token, drive_id):
