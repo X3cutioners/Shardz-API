@@ -463,7 +463,7 @@ def delete(access_token, file_id):
 def files(access_token):
     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
     if len(user.data) == 0:
-        return None
+        return 404
     else:
         user = user.data[0]
         files = user['files']['files']

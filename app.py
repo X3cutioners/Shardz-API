@@ -174,7 +174,9 @@ def delete():
 def files():
     access_token = request.headers.get('Authorization')
     response = shardz.files(access_token)
-    if response:
+    if response == 404:
+        return jsonify({"message": "No files uploaded"}), 404
+    elif response:
         return jsonify(response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401
