@@ -179,7 +179,7 @@ def files():
     elif response:
         return jsonify(response), 200
     else:
-        return jsonify({[]}), 401
+        return jsonify([]), 401
 
 if __name__ == '__main__':
     app.run(debug=True)
