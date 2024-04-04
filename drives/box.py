@@ -82,3 +82,15 @@ def download_file(access_token, refresh_token, file_id):
     client = Client(oauth)
     file = client.file(file_id).content()
     return file
+
+def delete_file(access_token, refresh_token, file_id):
+    oauth = OAuth2(
+        client_id= os.getenv('BOX_CLIENT_ID'),
+        client_secret= os.getenv('BOX_CLIENT_SECRET'),
+        access_token= access_token,
+        refresh_token= refresh_token,
+        store_tokens= lambda access_token, refresh_token: None,
+        )
+    client = Client(oauth)
+    client.file(file_id).delete()
+    return True

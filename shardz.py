@@ -433,6 +433,33 @@ def download(access_token, file_id):
         shutil.rmtree(f'downloads/{file_id}')
         return filename
     
+def delete(access_token, file_id):
+    user = supabase.table('users').select("*").eq('access_token', access_token).execute()
+    if len(user.data) == 0:
+        return None
+    else:
+        user = user.data[0]
+        files = user['files']['files']
+        for file in files:
+            if file['id'] == file_id:
+                file_parts = file['parts']
+                for part in file_parts:
+                    drives = user['drives']['drives']
+                    for drive in drives:
+                        if str(drive['id']) == str(part['drive_id']):
+                            if drive['drive_name'] == "Box":
+                                new_tokens = box.refresh_access_token(drive['refresh_token'])
+                                access_token = new_tokens['access_token']
+                                refresh_token = new_tokens['refresh_token']
+                                update_box_token(user['email'], refresh_token, drive['id'])
+                                box.delete(part['file_id'], access_token)
+                            elif drive['drive_name'] == "Dropbox":
+                                dbox.delete(part['file_name'], drive['refresh_token'])
+                files.remove(file)
+                files_data = {"files": files}
+                supabase.table('users').update({"files": files_data}).eq('access_token', access_token).execute()
+                return True
+    
 def files(access_token):
     user = supabase.table('users').select("*").eq('access_token', access_token).execute()
     if len(user.data) == 0:

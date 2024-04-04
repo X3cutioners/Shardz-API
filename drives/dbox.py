@@ -73,3 +73,8 @@ def download_file(file_name, refresh_token):
     dbx = Dropbox(oauth2_access_token=access_token)
     metadata, res = dbx.files_download(path=f'/{file_name}')
     return res.content
+
+def delete(file_name, refresh_token):
+    access_token = refresh_access_token(refresh_token)
+    dbx = Dropbox(oauth2_access_token=access_token)
+    dbx.files_delete(f'/{file_name}')

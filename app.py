@@ -159,6 +159,16 @@ def download():
         return send_file(f'downloads/{response}', as_attachment=True, download_name=response), 200
     else:
         return jsonify({"message": "Invalid access token"}), 401
+    
+@app.route('/delete', methods=['POST'])
+def delete():
+    access_token = request.headers.get('Authorization')
+    file_id = request.json['file_id']
+    response = shardz.delete(access_token, file_id)
+    if response:
+        return jsonify({"message": "File deleted successfully", "status": "success"}), 200
+    else:
+        return jsonify({"message": "Invalid access token"}), 401
 
 @app.route('/files', methods=['POST'])
 def files():
