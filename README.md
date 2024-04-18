@@ -20,5 +20,4 @@ Shardz is developed by Team X3cutioners
 
 - Abhishek Verma
 - Aman Sharma
-- Swati Kumari
 - Aadarsh Kumar Singh
